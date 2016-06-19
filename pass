@@ -228,6 +228,7 @@ cmd_usage() {
 	        If put on the clipboard, it will be cleared in $CLIP_TIME seconds.
 	    $PROGRAM grep search-string
 	        Search for password files containing search-string when decrypted.
+			$PROGRAM audit-duplicate
 	    $PROGRAM insert [--echo,-e | --multiline,-m] [--force,-f] pass-name
 	        Insert new password. Optionally, echo the password back to the console
 	        during entry. Or, optionally, the entry may be multiline. Prompt before
@@ -578,6 +579,17 @@ cmd_git() {
 	fi
 }
 
+cmd_audit_duplicate() {
+	local passfile passwords=()
+	while read -r -d "" passfile; do
+		local password=$($GPG -d "${GPG_OPTS[@]}" "$passfile" | head -n 1)
+		if echo "$password" | grep -qv 'BEGIN PRIVATE KEY'; then
+			passwords+=($password)
+		fi
+	done < <(find -L "$PREFIX" -iname '*.gpg' -print0)
+	echo ${passwords[*]} | tr " " "\n" | sort | uniq -c | sort -nr | grep -v "^[ \t]*1 "
+}
+
 genpasswd() {
 	local l=$1
 	[ "$l" == "" ] && l=16
@@ -598,6 +610,7 @@ case "$1" in
 	show|ls|list) shift;		cmd_show "$@" ;;
 	find|search) shift;		cmd_find "$@" ;;
 	grep) shift;			cmd_grep "$@" ;;
+	audit-duplicate) shift;		cmd_audit_duplicate "$@" ;;
 	insert|add) shift;		cmd_insert "$@" ;;
 	edit) shift;			cmd_edit "$@" ;;
 	generate) shift;		cmd_generate "$@" ;;
