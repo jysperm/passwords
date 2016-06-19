@@ -454,7 +454,14 @@ cmd_generate() {
 
 	[[ $inplace -eq 0 && $force -eq 0 && -e $passfile ]] && yesno "An entry already exists for $path. Overwrite it?"
 
-	local pass="$(pwgen -s $symbols $length 1)"
+	local pass=""
+
+	if hash pwgen 2>/dev/null; then
+		pass="$(pwgen -s $symbols $length 1)"
+	else
+		pass="$(genpasswd $length)"
+  fi
+
 	[[ -n $pass ]] || exit 1
 	if [[ $inplace -eq 0 ]]; then
 		$GPG -e "${GPG_RECIPIENT_ARGS[@]}" -o "$passfile" "${GPG_OPTS[@]}" <<<"$pass"
@@ -569,6 +576,12 @@ cmd_git() {
 	else
 		die "Error: the password store is not a git repository. Try \"$PROGRAM git init\"."
 	fi
+}
+
+genpasswd() {
+	local l=$1
+	[ "$l" == "" ] && l=16
+	tr -dc A-Za-z0-9_ < /dev/urandom | head -c ${l} | xargs
 }
 
 #
